@@ -9,6 +9,6 @@ Has one optional startup parameter that can be passed into the skill to force it
 - ReloadAssets, defaults to false. Setting to true will update all the assets, even if they already exist on the robot.  If false, will only upload assets if they do not exist on the robot.
 
 
-Copyright 2020 Misty Robotics
-Licensed under the Apache License, Version 2.0
-http://www.apache.org/licenses/LICENSE-2.0
+Copyright 2020 Brad Allen
+Licensed under the MIT License
+https://opensource.org/licenses/MIT
