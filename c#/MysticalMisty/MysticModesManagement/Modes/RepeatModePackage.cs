@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MistyRobotics.Common.Data;
@@ -10,26 +11,14 @@ using MysticModesManagement.Conversations;
 
 namespace MysticModesManagement
 {
-    public class RepeatModePackage : BaseModePackage
+    public class RepeatModePackage : BaseAllModesPackage
     {
-        private bool _repeatTime;
-        private AllModesConversation _allModesConversation;
         public override event EventHandler<PackageData> CallSwitchMode;
         public RepeatModePackage(IRobotMessenger misty) : base(misty) {}
 
         public override async Task<ResponsePacket> Start(PackageData packageData)
         {
-            PackageData = packageData;
-            await PrepareModeConversation();
-
-            //Start empty conversation for now to get the intents and contexts returned in the RobotInteractionEvent
-            //_emptyConversation = new EmptyConversation(Misty);
-            //await _emptyConversation.Initialize();
-
-            _allModesConversation = new AllModesConversation(Misty);
-            await _allModesConversation.Initialize();
-
-            await Misty.StartConversationAsync(_allModesConversation.ConversationName);
+            await base.Start(packageData);
 
             _ = Misty.SpeakAndListenAsync("Say something!", true, "saying", null);
 
@@ -38,7 +27,7 @@ namespace MysticModesManagement
 
         public override async Task<ResponsePacket> Stop()
         {
-            await BreakdownMode();
+           // await BreakdownMode();
             return await Task.FromResult(new ResponsePacket { Success = true });
         }
 
@@ -46,7 +35,11 @@ namespace MysticModesManagement
         {
             List<string> samples = new List<string>();
             samples.Add("repeat");
-            samples.Add("copy");
+            samples.Add("peat");
+            samples.Add("Pete");
+            samples.Add("repeat after me");
+            samples.Add("copy me");
+            samples.Add("after me");
 
             intent = new Intent
             {
@@ -57,15 +50,15 @@ namespace MysticModesManagement
             return true;
         }
 
-        protected override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
+        public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
-            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.CompletedASR)
+            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.FinalIntent)
             {
                 if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text))
                 {
                     await Misty.SpeakAndListenAsync($"I didn't hear anything. Try something else now!", true, "RepeatPhraseRetry", null);
                 }
-                else if (!robotInteractionEvent.DialogState.Intent.Equals("unknown", StringComparison.OrdinalIgnoreCase) && !robotInteractionEvent.DialogState.Intent.Equals("silence", StringComparison.OrdinalIgnoreCase))
+                else if (robotInteractionEvent.DialogState.Contexts.Contains("all-modes") && !robotInteractionEvent.DialogState.Intent.Equals("repeat", StringComparison.OrdinalIgnoreCase))
                 {
                     PackageData pd = new PackageData(MysticMode.Start, robotInteractionEvent.DialogState.Intent)
                     {

@@ -128,7 +128,6 @@
     <Compile Include="FunnyBone\SingleJokeFormat.cs" />
     <Compile Include="IModePackage.cs" />
     <Compile Include="MistySettings.cs" />
-    <Compile Include="MysticEvent.cs" />
     <Compile Include="MysticMode.cs" />
     <Compile Include="MysticMood.cs" />
     <Compile Include="MysticSetting.cs" />
@@ -169,7 +168,7 @@
     <Compile Include="Weather\MainElement.cs" />
     <Compile Include="Weather\OpenWeatherService.cs" />
     <Compile Include="Weather\WeatherElement.cs" />
-    <Compile Include="Weather\WeatherManager.cs" />
+    <Compile Include="Weather\EnglishWeatherManager.cs" />
     <Compile Include="Weather\WeatherResponse.cs" />
     <EmbeddedResource Include="Properties\MysticCommon.rd.xml" />
   </ItemGroup>

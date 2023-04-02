@@ -56,7 +56,7 @@ namespace EmailManager
 		/// </summary>
 		/// <param name="subject"></param>
 		/// <param name="senderEmail"></param>
-		/// <param name="toContact"></param>
+		/// <param name="toEmail"></param>
 		/// <param name="body"></param>
 		/// <returns></returns>
 		public bool SendEmail(string subject, SenderEmail senderEmail, string toEmail, string body, byte[] attachment = null, string attachmentName = "Image.jpg")

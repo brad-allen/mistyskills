@@ -8,7 +8,7 @@ using MysticCommon;
 
 namespace MysticModesManagement
 {
-    public class UnimplementedModePackage : BaseModePackage
+    public class UnimplementedModePackage : BaseAllModesPackage
     {
         public UnimplementedModePackage(IRobotMessenger misty) : base(misty) {}
 
@@ -38,7 +38,7 @@ namespace MysticModesManagement
             });
         }
 
-        private void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
+        public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
             //Any processing of the event from sensors, etc, that is not handled in the conversation, can be done here...
         }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MistyRobotics.Common.Data;
@@ -9,10 +10,8 @@ using MysticModesManagement.Conversations;
 
 namespace MysticModesManagement
 {
-    public class MagicEightBallModePackage : BaseModePackage
+    public class MagicEightBallModePackage : BaseAllModesPackage
     {
-        private bool _repeatTime;
-        private AllModesConversation _allModesConversation;
         private IList<string> _responses1 = new List<string>();
         private Random _random = new Random();
         public override event EventHandler<PackageData> CallSwitchMode;
@@ -20,6 +19,8 @@ namespace MysticModesManagement
 
         public override async Task<ResponsePacket> Start(PackageData packageData)
         {
+            await base.Start(packageData);
+
             _responses1.Add("Signs point to Yes.");
             _responses1.Add("Signs seem to indicate No.");
             _responses1.Add("Ask again later.");
@@ -34,25 +35,13 @@ namespace MysticModesManagement
             _responses1.Add("Outlook good!");
             _responses1.Add("I see good things!");
 
-            PackageData = packageData;
-            await PrepareModeConversation();
-
-            //Start empty conversation for now to get the intents and contexts returned in the RobotInteractionEvent
-            _allModesConversation = new AllModesConversation(Misty);
-            await _allModesConversation.Initialize();
-            await Misty.StartConversationAsync(_allModesConversation.ConversationName);
-
-            _ = Misty.SpeakAndListenAsync("Say something!", true, "saying", null);
+            _ = Misty.SpeakAndListenAsync("Magic Eight Ball! Ask me a Yes or no question!", true, "saying", null);
 
             return new ResponsePacket { Success = true };
         }
 
         public override async Task<ResponsePacket> Stop()
         {
-            //Do cleanup here...
-            _repeatTime = false;
-            Misty.UnregisterEvent("Test-is-this-needed", null);
-            //TODO make a disposable?
             return await Task.FromResult(new ResponsePacket { Success = true });
         }
 
@@ -72,15 +61,15 @@ namespace MysticModesManagement
             return true;
         }
 
-        protected override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
+        public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
-            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.CompletedASR)
+            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.FinalIntent)
             {
                 if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text))
                 {
-                    await Misty.SpeakAndListenAsync($"I didn't hear anything. Try something else now!", true, "RepeatPhraseRetry", null);
+                    await Misty.SpeakAndListenAsync($"I didn't hear anything. Ask me a Yes or No question now!", true, "RepeatPhraseRetry", null);
                 }
-                else if (!robotInteractionEvent.DialogState.Intent.Equals("unknown", StringComparison.OrdinalIgnoreCase) && !robotInteractionEvent.DialogState.Intent.Equals("silence", StringComparison.OrdinalIgnoreCase))
+                else if (robotInteractionEvent.DialogState.Contexts.Contains("all-modes") && !robotInteractionEvent.DialogState.Intent.Equals("magiceightball", StringComparison.OrdinalIgnoreCase))
                 {
                     PackageData pd = new PackageData(MysticMode.Start, robotInteractionEvent.DialogState.Intent)
                     {
@@ -96,12 +85,14 @@ namespace MysticModesManagement
                     {
                         int random1 = _random.Next(0, _responses1.Count);
                         string response1 = _responses1[random1];
-                        _ = Misty.SpeakAsync($"{robotInteractionEvent.DialogState.Text}? {response1}", true, "M8BPhrase");
+                        _ = Misty.SpeakAsync($"The answer to your question. {robotInteractionEvent.DialogState.Text}? {response1}.  Say hey Misty and ask me another Yes or No question!", true, "M8BPhrase");
+                        _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
                     }
                     catch
                     {
                         //should never happen
                         _ = Misty.SpeakAsync($"All my ones and zeroes are acting strange. Say, Hey Misty, and speak to me!", true, "M8BPhraseError");
+                        _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
                     }
                 }
             }

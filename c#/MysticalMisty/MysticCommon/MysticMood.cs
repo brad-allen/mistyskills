@@ -8,6 +8,7 @@
         Sad = 3,
         Angry = 4,
         Happy = 5,
-        Love = 6
+        Love = 6,
+        Encouraging = 7
     }
 }

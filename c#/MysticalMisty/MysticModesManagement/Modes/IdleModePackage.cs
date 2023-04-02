@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MistyRobotics.Common.Data;
@@ -10,7 +11,7 @@ using MysticModesManagement.Conversations;
 
 namespace MysticModesManagement
 {
-    public class IdleModePackage : BaseModePackage
+    public class IdleModePackage : BaseAllModesPackage
     {
         public override event EventHandler<PackageData> CallSwitchMode;
         private AllModesConversation _allModesConversation;
@@ -19,14 +20,8 @@ namespace MysticModesManagement
 
         public override async Task<ResponsePacket> Start(PackageData packageData)
         {
-            PackageData = packageData;
+            await base.Start(packageData);
 
-            await PrepareModeConversation();
-
-            //Start empty conversation for now to get the intents and contexts returned in the RobotInteractionEvent
-            _allModesConversation = new AllModesConversation(Misty);
-            await _allModesConversation.Initialize();
-            await Misty.StartConversationAsync(_allModesConversation.ConversationName);
             await Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
 
             return new ResponsePacket { Success = true };
@@ -34,7 +29,7 @@ namespace MysticModesManagement
 
         public override async Task<ResponsePacket> Stop()
         {
-            await BreakdownMode();
+           // await BreakdownMode();
             return await Task.FromResult(new ResponsePacket { Success = true });
         }
 
@@ -57,9 +52,9 @@ namespace MysticModesManagement
             return true;
         }
 
-        protected override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
+        public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
-            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.CompletedASR)
+            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.FinalIntent)
             {
                 if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text))
                 {
@@ -67,7 +62,7 @@ namespace MysticModesManagement
                     _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
                     
                 }
-                else if (!robotInteractionEvent.DialogState.Intent.Equals("unknown", StringComparison.OrdinalIgnoreCase) && !robotInteractionEvent.DialogState.Intent.Equals("silence", StringComparison.OrdinalIgnoreCase))
+                else if (robotInteractionEvent.DialogState.Contexts.Contains("all-modes"))
                 {
                     PackageData pd = new PackageData(MysticMode.Start, robotInteractionEvent.DialogState.Intent)
                     {

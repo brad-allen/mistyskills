@@ -31,11 +31,11 @@
 **********************************************************************/
 
 using System.Net.Http;
-using Conversation.Weather.OpenWeather.IpStack;
-using Conversation.Weather.OpenWeather.IpStack.Models;
+using Weather.OpenWeather.IpStack;
+using Weather.OpenWeather.IpStack.Models;
 using Newtonsoft.Json;
 
-namespace Conversation.Weather.OpenWeather
+namespace Weather.OpenWeather
 {
 	public class OpenWeatherService : IWeatherService
 	{

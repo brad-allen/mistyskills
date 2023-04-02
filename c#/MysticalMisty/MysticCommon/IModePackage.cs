@@ -1,4 +1,5 @@
 ﻿using MistyRobotics.Common.Data;
+using MistyRobotics.SDK.Events;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -21,6 +22,8 @@ namespace MysticCommon
     public interface IModePackage
     {
         event EventHandler<PackageData> CallSwitchMode;
+
+        void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent);
 
         /// <summary>
         /// The intent to use to choose this mode option

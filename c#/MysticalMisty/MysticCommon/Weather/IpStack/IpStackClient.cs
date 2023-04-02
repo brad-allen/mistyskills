@@ -1,8 +1,8 @@
 ﻿using System.Net.Http;
-using Conversation.Weather.OpenWeather.IpStack.Models;
+using Weather.OpenWeather.IpStack.Models;
 using Newtonsoft.Json;
 
-namespace Conversation.Weather.OpenWeather.IpStack
+namespace Weather.OpenWeather.IpStack
 {
 	public class IpStackClient
 	{

@@ -10,7 +10,7 @@ namespace MysticModesManagement
 {
     public class BaseModePackage : IModePackage
     {
-        protected IRobotMessenger Misty;
+        protected IRobotMessenger Misty { get; set; }
         public virtual event EventHandler<PackageData> CallSwitchMode;
         protected PackageData PackageData;
 
@@ -21,12 +21,13 @@ namespace MysticModesManagement
 
         public virtual async Task<ResponsePacket> Start(PackageData packageData)
         {
-            return await Task.FromResult(new ResponsePacket { Success = false });
+            PackageData = packageData;
+            return await Task.FromResult(new ResponsePacket { Success = true });
         }
 
         public virtual async Task<ResponsePacket> Stop()
         {
-            return await Task.FromResult(new ResponsePacket { Success = false });
+            return await Task.FromResult(new ResponsePacket { Success = true });
         }
 
         public virtual bool TryGetIntentTrigger(out Intent intent)
@@ -52,35 +53,7 @@ namespace MysticModesManagement
             await Misty.DeleteNLPContextAsync(name);
         }
 
-        protected virtual void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
-        {
+        public virtual void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent) {}
 
-        }
-
-        protected async Task<bool> PrepareModeConversation()
-        {
-            //reset key phrase
-            await Misty.StopKeyPhraseRecognitionAsync();
-            
-            //Must register voice record event or else data will not get processed and sent, or added to RobotInteractionEvent data
-            _ = Misty.RegisterVoiceRecordEvent(0, true, "StartVREvent", null); //shouldn't be needed, but might be still - oops
-            //Register and listen for Robot Interaction Event instead of VoiceRecord event in oprder to catch other events in one listener as well
-            //just a personal pref...
-            //TODO Add filters to keep this less noisy
-            Misty.RegisterRobotInteractionEvent(RobotInteractionCallback, 0, true, "RobotInteractionEvent", null, null);
-            //Start the event, not using vision data
-            Misty.StartRobotInteractionEvent(false, null);
-            //Reset tally light to only turn on when listening to avoid speaking hint confusion
-            await Misty.SetTallyLightSettingsAsync(true, false, false);
-            return true;
-        }
-        
-        protected async Task BreakdownMode()
-        {
-            Misty.UnregisterEvent("StartVREvent", null);
-            Misty.UnregisterEvent("RobotInteractionEvent", null);
-            //Set tally light settings back to default
-            await Misty.SetTallyLightSettingsAsync(true, true, true);
-        }
     }
 }

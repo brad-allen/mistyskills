@@ -3,8 +3,8 @@
     public enum SpeechVerbosity
     {
         Silent = 0,
-        Shy = 0,
-        Average = 0,
-        Talkative = 0
+        Shy = 1,
+        Average = 2,
+        Talkative = 3
     }
 }

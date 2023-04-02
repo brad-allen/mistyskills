@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MistyRobotics.Common.Data;
@@ -9,18 +10,18 @@ using MysticModesManagement.Conversations;
 
 namespace MysticModesManagement
 {
-    public class RubberDuckeyModePackage : BaseModePackage
+    public class RubberDuckeyModePackage : BaseAllModesPackage
     {
-        private bool _repeatTime;
         private IList<string> _responses1 = new List<string>();
         private IList<string> _responses2 = new List<string>();
         private Random _random = new Random();
         public override event EventHandler<PackageData> CallSwitchMode;
-        private AllModesConversation _allModesConversation;
         public RubberDuckeyModePackage(IRobotMessenger misty) : base(misty) {}
 
         public override async Task<ResponsePacket> Start(PackageData packageData)
         {
+            await base.Start(packageData);
+
             _responses1.Add("Hmmmm.");
             _responses1.Add(" ... ");
             _responses1.Add(" Okay, let me think.");
@@ -35,14 +36,6 @@ namespace MysticModesManagement
             _responses2.Add("Seems clear to me?");
             _responses2.Add("Seems unclear to me? Can you say that a different way?");
 
-            PackageData = packageData;
-            await PrepareModeConversation();
-
-            //Start empty conversation for now to get the intents and contexts returned in the RobotInteractionEvent
-            _allModesConversation = new AllModesConversation(Misty);
-            await _allModesConversation.Initialize();
-            await Misty.StartConversationAsync(_allModesConversation.ConversationName);
-
             _ = Misty.SpeakAndListenAsync("Say something!", true, "saying", null);
 
             return new ResponsePacket { Success = true };
@@ -50,10 +43,6 @@ namespace MysticModesManagement
 
         public override async Task<ResponsePacket> Stop()
         {
-            //Do cleanup here...
-            _repeatTime = false;
-            Misty.UnregisterEvent("Test-is-this-needed", null);
-            //TODO make a disposable?
             return await Task.FromResult(new ResponsePacket { Success = true });
         }
 
@@ -63,6 +52,7 @@ namespace MysticModesManagement
             samples.Add("rubber duckey");
             samples.Add("duckey");
             samples.Add("duck");
+            samples.Add("rubber duck");
 
             intent = new Intent
             {
@@ -73,15 +63,15 @@ namespace MysticModesManagement
             return true;
         }
 
-        protected override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
+        public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
-            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.CompletedASR)
+            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.FinalIntent)
             {
-                if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text))
+                if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text) || robotInteractionEvent.DialogState.Intent.Equals("silence", StringComparison.OrdinalIgnoreCase))
                 {
-                    await Misty.SpeakAndListenAsync($"I didn't hear anything. Try something else now!", true, "RepeatPhraseRetry", null);
+                    await Misty.SpeakAndListenAsync($"I didn't hear anything. Say something else now!", true, "RepeatPhraseRetry", null);
                 }
-                else if (!robotInteractionEvent.DialogState.Intent.Equals("unknown", StringComparison.OrdinalIgnoreCase) && !robotInteractionEvent.DialogState.Intent.Equals("silence", StringComparison.OrdinalIgnoreCase))
+                else if (robotInteractionEvent.DialogState.Contexts.Contains("all-modes") && !robotInteractionEvent.DialogState.Intent.Equals("rubberduckey", StringComparison.OrdinalIgnoreCase))
                 {
                     PackageData pd = new PackageData(MysticMode.Start, robotInteractionEvent.DialogState.Intent)
                     {
@@ -99,12 +89,14 @@ namespace MysticModesManagement
                         int random2 = _random.Next(0, _responses2.Count);
                         string response1 = _responses1[random1];
                         string response2 = _responses2[random2];
-                        _ = Misty.SpeakAsync($"{response1}. {robotInteractionEvent.DialogState.Text}. {response2}", true, "RubberDuckeyPhrase");
+                        _ = Misty.SpeakAsync($"{response1}. {robotInteractionEvent.DialogState.Text}. {response2}. To talk to me about something else, say Hey Misty and then talk to me!", true, "RubberDuckeyPhrase");
+                        await Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
                     }
                     catch
                     {
                         //should never happen
-                        _ = Misty.SpeakAsync($"All my ones and zeroes are acting strange. Say, Hey Misty, and speak to me!", true, "RubberDuckeyPhraseError");
+                        await Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000); 
+                        _ = Misty.SpeakAsync($"All my ones and zeroes are acting strange. Say, Hey Misty, and speak to me!", true, "RubberDuckeyPhraseError");                        
                     }
                 }
             }

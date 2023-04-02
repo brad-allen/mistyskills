@@ -26,7 +26,7 @@ namespace MysticModesManagement.Conversations
 			await _misty.CreateStateAsync(new CreateStateParameters
 			{
 				Name = "all-modes-check",
-				Contexts = new List<string> { { "allmodes" }  },
+				Contexts = new List<string> { { "all-modes" }  },
 				Speak = "",
 				Overwrite = true,
 			});
@@ -35,9 +35,8 @@ namespace MysticModesManagement.Conversations
 
 			//Set Context of modes so we can understand what they are asking for...
 			//Arggh! Bug?!
-			var test = await _misty.SetContextAsync("allmodes", false, null, false);
+			var test = await _misty.SetContextAsync("all-modes", false, null, false);
 
-			
 			return true;
 		}
 

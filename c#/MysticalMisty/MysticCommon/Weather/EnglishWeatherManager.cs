@@ -35,12 +35,12 @@ using System.Collections.Generic;
 using System.Threading;
 using MistyRobotics.SDK.Messengers;
 
-namespace Conversation.Weather.OpenWeather
+namespace Weather.OpenWeather
 {
 	/// <summary>
 	/// Write your own to have Misty say the weather differently
 	/// </summary>
-	public class WeatherManager
+	public class EnglishWeatherManager
 	{
 		private IRobotMessenger _misty;
 		private Timer _weatherUpdate;
@@ -53,7 +53,7 @@ namespace Conversation.Weather.OpenWeather
 		private string _openWeatherCountryCode;
 		private string _openWeatherCity;
 
-		public WeatherManager(IRobotMessenger misty, string openWeatherApiAuth, string ipStackApiAuth, string openWeatherCountryCode, string openWeatherCity)
+		public EnglishWeatherManager(IRobotMessenger misty, string openWeatherApiAuth, string ipStackApiAuth, string openWeatherCountryCode, string openWeatherCity)
 		{
 			_misty = misty;
 			_ipStackApiAuth = ipStackApiAuth;

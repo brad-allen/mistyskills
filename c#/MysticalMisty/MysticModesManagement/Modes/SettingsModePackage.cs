@@ -9,7 +9,7 @@ using MysticCommon;
 
 namespace MysticModesManagement
 {
-    public class SettingsModePackage : BaseModePackage
+    public class SettingsModePackage : BaseAllModesPackage
     {
         private bool _repeatTime;
         private IList<string> _responses1 = new List<string>();
@@ -20,7 +20,7 @@ namespace MysticModesManagement
         public override async Task<ResponsePacket> Start(PackageData packageData)
         {
             _repeatTime = true;
-            _ = Misty.RegisterVoiceRecordEvent(0, true, "Test-is-this-needed", null); //shouldn't be needed, but might be still - oops
+           // _ = Misty.RegisterVoiceRecordEvent(0, true, "Test-is-this-needed", null); //shouldn't be needed, but might be still - oops
             _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
             _ = Misty.SpeakAsync($"Say, Hey Misty, and talk to me!", true, "Settings");
 
@@ -51,9 +51,9 @@ namespace MysticModesManagement
             return true;
         }
 
-        private void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
+        public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
-            if (_repeatTime && robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.CompletedASR)
+            if (_repeatTime && robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.FinalIntent)
             {
                 if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text))
                 {

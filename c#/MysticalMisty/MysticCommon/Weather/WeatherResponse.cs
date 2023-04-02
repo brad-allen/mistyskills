@@ -30,7 +30,7 @@
 		https://www.mistyrobotics.com/legal/end-user-license-agreement/
 **********************************************************************/
 
-namespace Conversation.Weather.OpenWeather
+namespace Weather.OpenWeather
 {
 	public class WeatherResponse
 	{

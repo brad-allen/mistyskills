@@ -12,6 +12,8 @@ using MistyRobotics.SDK.Logger;
 using MistyRobotics.SDK.Messengers;
 using MistyRobotics.SDK.Responses;
 using MysticCommon;
+using MysticModesManagement.Conversations;
+using SkillTools.AssetTools;
 
 namespace MysticModesManagement
 {
@@ -33,7 +35,6 @@ namespace MysticModesManagement
             {
             }
         }
-
 
         public async Task CreateYesNoContext()
         {
@@ -98,21 +99,39 @@ namespace MysticModesManagement
         private ModeManager() { }
         private static int _ipChecks = 0;
         private static Context _modeContext = new Context();
+        private static ConversationHelper _conversationHelper;
+        private static string _currentIp;
+        private static AssetWrapper _assetWrapper;
 
         public static async Task<ModeManager> Initialize(IDictionary<string, object> parameters, IRobotMessenger misty)
         {
             try
             {
                 await _initLock.WaitAsync();
+
+                //Example using asset wrapper library in SkillTools, uncomment to auto load missing assets in Assets/SkillAssets
+                //  folder in starting project (MysticalMistySkill project) at start of skill
+                _assetWrapper = new AssetWrapper(misty);
+                await _assetWrapper.LoadAssets(false); //will only save if they don't exist, can take a while if you await and have a lot of assets
+
                 _parameters = parameters;
                 _misty = misty;
                 _logger = _misty.SkillLogger;
+
+                //Check for wifi and handle in callback method instead of awaiting
+                _misty.GetDeviceInformation(DeviceInformationHandler);
+
+                //load helper to help build some conversations with common mappings
+                _conversationHelper = new ConversationHelper(_misty);
 
                 if (_modeManager != null)
                 {
                     _logger.LogInfo("ModeManager reinitialized.");
                     return _modeManager;
                 }
+
+                //Cleanup any leftovers
+                await Cleanup();
 
                 _commonContexts = new CommonContexts();
                 _commonContexts.Initialize(_parameters, _misty);
@@ -129,11 +148,11 @@ namespace MysticModesManagement
                 _modePackages.Add(MysticMode.RubberDuckey, new RubberDuckeyModePackage(_misty));
                 _modePackages.Add(MysticMode.MagicEightBall, new MagicEightBallModePackage(_misty));
 
-                _modePackages.Add(MysticMode.VoiceCommand, new VoiceCommandModePackage(_misty));
-                _modePackages.Add(MysticMode.Weather, new WeatherModePackage(_misty)); 
-                _modePackages.Add(MysticMode.Sentry, new SentryModePackage(_misty));
-                _modePackages.Add(MysticMode.Wander, new WanderModePackage(_misty));
-                _modePackages.Add(MysticMode.Settings, new SettingsModePackage(_misty));
+                //_modePackages.Add(MysticMode.VoiceCommand, new VoiceCommandModePackage(_misty));
+                //_modePackages.Add(MysticMode.Weather, new WeatherModePackage(_misty)); 
+                //_modePackages.Add(MysticMode.Sentry, new SentryModePackage(_misty));
+                //_modePackages.Add(MysticMode.Wander, new WanderModePackage(_misty));
+                //_modePackages.Add(MysticMode.Settings, new SettingsModePackage(_misty));
 
                 //TODO SOME DAY
                 //_modePackages.Add(MysticMode.ConnectToNetwork, unp);
@@ -163,6 +182,7 @@ namespace MysticModesManagement
 
                 await _commonContexts.CreateYesNoContext();
 
+                /*
                 IList<Intent> intents = new List<Intent>();
                 foreach (KeyValuePair<MysticMode, IModePackage> package in _modePackages)
                 {
@@ -179,20 +199,22 @@ namespace MysticModesManagement
 
                 _modeContext = new Context
                 {
-                    Name = "AllModes",
+                    Name = "all-modes",
                     Intents = intents,
                     Editable = true
                 };
 
+                await _conversationHelper.TrainNLPHack(_modeContext, _currentIp, true, true);
+
                 var test = await _misty.TrainNLPEngineAsync(_modeContext, true, true);
-                _misty.TrainNLPEngine(_modeContext, true, true, null);
+
+                */
+                //_misty.TrainNLPEngine(_modeContext, true, true, null);
 
 
-                //Check for wifi
-                _misty.GetDeviceInformation(DeviceInformationHandler);
+                await PrepareDialogSystem();
 
-                await SwitchMode(MysticMode.Start);
-               // await smp.Start(_parameters);
+                // await smp.Start(_parameters);
                 return _modeManager;
             }
             catch (Exception ex)
@@ -206,6 +228,32 @@ namespace MysticModesManagement
             }
         }
 
+        private static async Task PrepareDialogSystem()
+        {
+            _misty.RegisterVoiceRecordEvent(0, true, "StartVREvent", null); //shouldn't be needed, but might be still - oops
+
+            //Register and listen for Robot Interaction Event instead of VoiceRecord event in order to catch other events in one listener as well
+            //TODO Add filters to keep this less noisy
+            _misty.RegisterRobotInteractionEvent(RobotInteractionCallback, 0, true, "RobotInteractionEvent", null, null);
+            //Start the event, not using vision data
+            await _misty.StartRobotInteractionEventAsync(false);
+            //Reset tally light to only turn on when listening to avoid speaking hint confusion
+            await _misty.SetTallyLightSettingsAsync(true, false, false);
+        }
+
+        protected static void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent) 
+        {
+            if(_currentPackage != null)
+            {
+                //Pass it on to the currently running package
+                _currentPackage.RobotInteractionCallback(robotInteractionEvent);
+            }
+        }
+
+        /// <summary>
+        /// Process the device info data when it comes back
+        /// </summary>
+        /// <param name="data"></param>
         private static async void DeviceInformationHandler(IGetDeviceInformationResponse data)
         {
             _ipChecks++;
@@ -238,10 +286,45 @@ namespace MysticModesManagement
             if (data.Status == ResponseStatus.Success)
             {
                 await _misty.DisplayTextAsync(data.Data.IPAddress, "IpLayer");
+
+                _currentIp = data.Data.IPAddress;
+
+                IList<Intent> intents = new List<Intent>();
+                foreach (KeyValuePair<MysticMode, IModePackage> package in _modePackages)
+                {
+                    if (package.Value.TryGetIntentTrigger(out Intent intent))
+                    {
+                        intents.Remove(intent);
+                        intents.Add(intent);
+
+                        _intentModes.Add(intent.Name, package.Key);
+                    }
+
+                    package.Value.CallSwitchMode += SwitchModeRequestReceived;
+                }
+
+                _modeContext = new Context
+                {
+                    Name = "all-modes",
+                    Intents = intents,
+                    Editable = true
+                };
+
+
+                //_currentIp
+                //169.254.202.146
+                //169.254.133.55
+                await _conversationHelper.TrainNLPHack(_modeContext, "169.254.202.146", true, true);
+
+                //var test = await _misty.TrainNLPEngineAsync(_modeContext, true, true);
+
                 _ipChecks = 0; //reset for requestable option
 
                 //Display for X secs / make config and requestable
                 _ipDisplayTimer = new Timer(IpDisplayedCallback, null, 20000, Timeout.Infinite);
+
+                await SwitchMode(MysticMode.Start);
+
             }
             else
             {
@@ -286,12 +369,12 @@ namespace MysticModesManagement
             return _currentMode;
         }
 
-        public static void SwitchModeRequestReceived(object sender, PackageData e)
+        public static async void SwitchModeRequestReceived(object sender, PackageData e)
         {
             string data = e.DataName;//.ToLower().Trim();
             if (_intentModes.ContainsKey(data))
             {
-                _ = SwitchMode(_intentModes[data]);
+                await SwitchMode(_intentModes[data]);
             }
             else if (_modePackages.TryGetValue(MysticMode.Idle, out IModePackage idlePackage))
             {
@@ -311,14 +394,17 @@ namespace MysticModesManagement
             try
             {
                 await _modeLock.WaitAsync();
-
+                bool loading = false;
                 if(_currentPackage != null)
                 {
                     _logger.LogInfo($"{ _currentMode} stopping.");
                     await _currentPackage.Stop();
-                    await _misty.StopConversationAsync();
-                    await _misty.StopKeyPhraseRecognitionAsync();
+
                     _logger.LogInfo($"{ _currentMode} stopped.");
+                }
+                else
+                {
+                    loading = true;
                 }
 
                 if (_modePackages.TryGetValue(newMode, out IModePackage modePackage))
@@ -326,16 +412,39 @@ namespace MysticModesManagement
                     _currentPackage = modePackage;
                     _currentMode = newMode;
                     _logger.LogInfo($"{ _currentMode} starting.");
+
+
                     _ = _currentPackage.Start(new PackageData(_currentMode, _currentMode.ToString())
                     {
                         ModeContext = _modeContext,
                         Parameters = _parameters
                     });
 
-                    return new ResponsePacket
+                    if(!loading)
                     {
-                        Success = true
-                    };
+                        await _misty.SetTextDisplaySettingsAsync("IpLayer",
+                            new TextSettings
+                            {
+                                Height = 60,
+                                HorizontalAlignment = ImageHorizontalAlignment.Center,
+                                VerticalAlignment = ImageVerticalAlignment.Bottom,
+                                Weight = 70,
+                                Visible = true,
+                                PlaceOnTop = true,
+                                Red = 255,
+                                Green = 255,
+                                Blue = 255,
+                                Style = ImageStyle.Normal,
+                                Size = 40
+                            }
+                        );
+
+                        await _misty.DisplayTextAsync($"New Mode:{_currentMode.ToString()}", "IpLayer");
+                        _ipDisplayTimer = new Timer(IpDisplayedCallback, null, 5000, Timeout.Infinite);
+                    }
+                    
+                    
+                    return new ResponsePacket { Success = true };
                 }
 
                 if (_modePackages.TryGetValue(MysticMode.Idle, out IModePackage idlePackage))
@@ -464,24 +573,37 @@ namespace MysticModesManagement
             }
         }*/
 
+        private static async Task Cleanup()
+        {
+            if (_misty != null)
+            {
+                _misty.UnregisterAllEvents(null);
+                await _misty.StopConversationAsync();
+                await _misty.StopKeyPhraseRecognitionAsync();
+                await _misty.StopRobotInteractionEventAsync();
+                await _misty.SetTextDisplaySettingsAsync("IpLayer",
+               new TextSettings
+               {
+                   Deleted = true
+               });
+
+            }
+        }
+
         #region IDisposable Support
 
         private bool _isDisposed = false;
 
-        private void Dispose(bool disposing)
+        private async void Dispose(bool disposing)
         {
             if (!_isDisposed)
             {
                 if (disposing)
                 {
+                    await Cleanup();
+                    await _misty.SetTallyLightSettingsAsync(true, true, true);
                     _currentMode = MysticMode.Uninitialized;
                     _modePackages.Clear();
-                    _misty.SetTextDisplaySettings("IpLayer",
-                       new TextSettings
-                       {
-                           Deleted = true
-                       },
-                       null);
                 }
 
                 _currentPackage = null;

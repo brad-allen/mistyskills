@@ -91,7 +91,7 @@ namespace MysticalMistySkill
 			{
 				if (disposing)
 				{
-					_modeManager.Dispose();
+					_modeManager?.Dispose();
 				}
 				
 				_modeManager = null;

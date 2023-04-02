@@ -26,7 +26,7 @@ namespace MysticModesManagement
             _responses1.Add("Signs seem to indicate No.");
 
             _repeatTime = true;
-            _ = Misty.RegisterVoiceRecordEvent(0, true, "Test-is-this-needed", null); //shouldn't be needed, but might be still - oops
+       //     _ = Misty.RegisterVoiceRecordEvent(0, true, "Test-is-this-needed", null); //shouldn't be needed, but might be still - oops
 
                 //listen for stop
             _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
@@ -69,9 +69,9 @@ namespace MysticModesManagement
             return true;
         }
 
-        private async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
+        public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
-            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.CompletedASR)
+            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.FinalIntent)
             {
                 if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text))
                 {

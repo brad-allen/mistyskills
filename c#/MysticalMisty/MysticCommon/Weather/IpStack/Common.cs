@@ -30,7 +30,7 @@
 		https://www.mistyrobotics.com/legal/end-user-license-agreement/
 **********************************************************************/
 
-namespace Conversation.Weather.OpenWeather.IpStack
+namespace Weather.OpenWeather.IpStack
 {
 	public static class Common
 	{

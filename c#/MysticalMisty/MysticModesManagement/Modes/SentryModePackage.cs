@@ -96,7 +96,7 @@ namespace MysticModesManagement
         public DateTimeOffset Timestamp { get; set; }
     }
 
-    public class SentryModePackage : BaseModePackage
+    public class SentryModePackage : BaseAllModesPackage
     {
         private bool _repeatTime;
         public SentryModePackage(IRobotMessenger misty) : base(misty) { }
@@ -106,7 +106,7 @@ namespace MysticModesManagement
         public override async Task<ResponsePacket> Start(PackageData packageData)
         {
             _repeatTime = true;
-            _ = Misty.RegisterVoiceRecordEvent(0, true, "Test-is-this-needed", null); //shouldn't be needed, but might be still - oops
+           // _ = Misty.RegisterVoiceRecordEvent(0, true, "Test-is-this-needed", null); //shouldn't be needed, but might be still - oops
 
             //Set the intents of this modes
             //overlap contexts if want to add to the existing ones, filtered intents will remove those options from any current contexts after processing, retrain is experimental
@@ -197,7 +197,7 @@ namespace MysticModesManagement
             return true;
         }
 
-        private void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
+        public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
           switch(robotInteractionEvent.EventType)
             {

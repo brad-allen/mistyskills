@@ -32,7 +32,7 @@
 
 using System;
 
-namespace Conversation.Weather.OpenWeather.IpStack.Models
+namespace Weather.OpenWeather.IpStack.Models
 {
 	public class TimeZone
 	{

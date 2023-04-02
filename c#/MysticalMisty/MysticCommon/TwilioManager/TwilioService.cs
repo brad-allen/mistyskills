@@ -93,9 +93,15 @@ namespace TwilioManager
 		{
 			try
 			{
-				if (string.IsNullOrWhiteSpace(toPhoneNumber) || string.IsNullOrWhiteSpace(_senderSmsPhone))
+				if (string.IsNullOrWhiteSpace(toPhoneNumber))
 				{
-                    return false;
+					_misty.SkillLogger.Log("Missing receiver's phone number.");
+					return false;
+				}
+				else if (string.IsNullOrWhiteSpace(_senderSmsPhone))
+				{
+					_misty.SkillLogger.Log("Missing sender's phone number.");
+					return false;
 				}
 
 				MessageResource.Create(

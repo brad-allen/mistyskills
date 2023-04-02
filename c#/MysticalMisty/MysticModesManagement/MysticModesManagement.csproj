@@ -126,6 +126,7 @@
     <Compile Include="Conversations\EmptyConversation.cs" />
     <Compile Include="ModeManager.cs" />
     <Compile Include="Modes\BackwardModePackage.cs" />
+    <Compile Include="Modes\BaseAllModesPackage.cs" />
     <Compile Include="Modes\BaseModePackage.cs" />
     <Compile Include="Modes\IdleModePackage.cs" />
     <Compile Include="Modes\MagicEightBallModePackage.cs" />
