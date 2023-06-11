@@ -122,6 +122,7 @@
   <ItemGroup>
     <Compile Include="CurrentObstacleState.cs" />
     <Compile Include="DriveHeartbeat.cs" />
+    <Compile Include="DriveManagerParameters.cs" />
     <Compile Include="DriveManager.cs" />
     <Compile Include="DriveManagers\BaseDrive.cs" />
     <Compile Include="DriveManagers\CarefulDrive.cs" />

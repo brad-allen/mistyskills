@@ -6,7 +6,7 @@ using MistyRobotics.Common.Data;
 using MistyRobotics.SDK.Events;
 using MistyRobotics.SDK.Messengers;
 using MysticCommon;
-using MysticModesManagement.Conversations;
+using MistyRobotics.Common.Types;
 
 namespace MysticModesManagement
 {
@@ -21,18 +21,18 @@ namespace MysticModesManagement
         {
             await base.Start(packageData);
 
-            _responses1.Add("Signs point to Yes.");
-            _responses1.Add("Signs seem to indicate No.");
-            _responses1.Add("Ask again later.");
-            _responses1.Add("The fog is clearing, ask again now!");
-            _responses1.Add("It is certain.");
-            _responses1.Add("Without a doubt");
-            _responses1.Add("Better not tell you now.");
-            _responses1.Add("Concentrate and ask again.");
-            _responses1.Add("Very doubtful");
-            _responses1.Add("Outlook not so good");
+            _responses1.Add("I say that signs point to Yes.");
+            _responses1.Add("I say that Signs seem to indicate No.");
+            _responses1.Add("I say, Ask again later.");
+            _responses1.Add("I say I am uncertain, but the fog is clearing, ask again now!");
+            _responses1.Add("I say, It is certain.");
+            _responses1.Add("I say, Without a doubt");
+            _responses1.Add("I believe I better not tell you now.");
+            _responses1.Add("It is unclear, concentrate and ask again.");
+            _responses1.Add("I say, it is Very doubtful");
+            _responses1.Add("I believe the outlook is not so good");
             _responses1.Add("My reply is no");
-            _responses1.Add("Outlook good!");
+            _responses1.Add("I say, the outlook is very good!");
             _responses1.Add("I see good things!");
 
             _ = Misty.SpeakAndListenAsync("Magic Eight Ball! Ask me a Yes or no question!", true, "saying", null);
@@ -63,21 +63,29 @@ namespace MysticModesManagement
 
         public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
-            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.FinalIntent)
+            if (robotInteractionEvent.Step != RobotInteractionStep.Dialog &&
+                   robotInteractionEvent.Step != RobotInteractionStep.BumperPressed &&
+                   robotInteractionEvent.Step != RobotInteractionStep.CapTouched)
+            {
+                return;
+            }
+
+            if (robotInteractionEvent.DialogState?.Step == DialogActionStep.FinalIntent)
             {
                 if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text))
                 {
                     await Misty.SpeakAndListenAsync($"I didn't hear anything. Ask me a Yes or No question now!", true, "RepeatPhraseRetry", null);
                 }
-                else if (robotInteractionEvent.DialogState.Contexts.Contains("all-modes") && !robotInteractionEvent.DialogState.Intent.Equals("magiceightball", StringComparison.OrdinalIgnoreCase))
+                else if (robotInteractionEvent.DialogState.Contexts.Contains("all-modes") && !robotInteractionEvent.DialogState.Intent.Equals("magiceightball", StringComparison.OrdinalIgnoreCase) && !robotInteractionEvent.DialogState.Intent.Equals("unknown", StringComparison.OrdinalIgnoreCase))
                 {
-                    PackageData pd = new PackageData(MysticMode.Start, robotInteractionEvent.DialogState.Intent)
+                    PackageData pd = new PackageData(MysticMode.MagicEightBall, robotInteractionEvent.DialogState.Intent)
                     {
                         ModeContext = PackageData.ModeContext,
                         Parameters = PackageData.Parameters
                     };
 
                     CallSwitchMode?.Invoke(this, pd);
+                    return;
                 }
                 else
                 {
@@ -85,14 +93,18 @@ namespace MysticModesManagement
                     {
                         int random1 = _random.Next(0, _responses1.Count);
                         string response1 = _responses1[random1];
-                        _ = Misty.SpeakAsync($"The answer to your question. {robotInteractionEvent.DialogState.Text}? {response1}.  Say hey Misty and ask me another Yes or No question!", true, "M8BPhrase");
-                        _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
+                        //await Misty.StopKeyPhraseRecognitionAsync()
+                        await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
+                        _ = Misty.SpeakAsync($"In response to your question, {robotInteractionEvent.DialogState.Text}? {response1}.  Say hey Misty and ask me another Yes or No question!", true, "M8BPhrase");
+
                     }
                     catch
                     {
                         //should never happen
+                        //await Misty.StopKeyPhraseRecognitionAsync()
+                        await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
                         _ = Misty.SpeakAsync($"All my ones and zeroes are acting strange. Say, Hey Misty, and speak to me!", true, "M8BPhraseError");
-                        _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
+
                     }
                 }
             }

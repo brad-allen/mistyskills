@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using MistyRobotics.SDK.Messengers;
 using Wander.Types;
 
@@ -117,6 +118,6 @@ namespace Wander
 			}
 		}
 
-		public abstract void Drive();
+		public abstract Task<bool> Drive();
 	}
 }

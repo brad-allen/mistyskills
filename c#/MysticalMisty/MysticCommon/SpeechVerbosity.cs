@@ -1,5 +1,6 @@
 ﻿namespace MysticCommon
 {
+#pragma warning disable 1591
     public enum SpeechVerbosity
     {
         Silent = 0,
@@ -7,4 +8,5 @@
         Average = 2,
         Talkative = 3
     }
+#pragma warning restore 1591
 }

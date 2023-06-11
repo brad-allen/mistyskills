@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using MistyRobotics.Common.Data;
 using MistyRobotics.Common.Types;
 using MistyRobotics.SDK.Events;
@@ -12,9 +11,9 @@ namespace MysticModesManagement
     {
         public UnimplementedModePackage(IRobotMessenger misty) : base(misty) {}
 
-        public override async Task<ResponsePacket> Start(PackageData packageData)
+        public async override Task<ResponsePacket> Start(PackageData packageData)
         {
-            return new ResponsePacket 
+            return await Task.FromResult(new ResponsePacket 
             { 
                 Success = false, 
                 ErrorDetails = new ErrorDetails 
@@ -22,7 +21,7 @@ namespace MysticModesManagement
                     ResponseMessage = "Mode is not implented.", 
                     ErrorLevel = SkillLogLevel.Warning 
                 } 
-            };
+            });
         }
 
         public override async Task<ResponsePacket> Stop()
@@ -38,7 +37,7 @@ namespace MysticModesManagement
             });
         }
 
-        public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
+        public override void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
             //Any processing of the event from sensors, etc, that is not handled in the conversation, can be done here...
         }

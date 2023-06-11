@@ -3,10 +3,10 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MistyRobotics.Common.Data;
+using MistyRobotics.Common.Types;
 using MistyRobotics.SDK.Events;
 using MistyRobotics.SDK.Messengers;
 using MysticCommon;
-using MysticModesManagement.Conversations;
 
 namespace MysticModesManagement
 {
@@ -25,7 +25,6 @@ namespace MysticModesManagement
 
         public override async Task<ResponsePacket> Stop()
         {
-            //await BreakdownMode();
             return await Task.FromResult(new ResponsePacket { Success = true });
         }
 
@@ -35,7 +34,6 @@ namespace MysticModesManagement
             samples.Add("backward");
             samples.Add("back ward");
             samples.Add("back word");
-            samples.Add("reverse");
 
             intent = new Intent
             {
@@ -48,15 +46,22 @@ namespace MysticModesManagement
 
         public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
-            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.FinalIntent)
+            if (robotInteractionEvent.Step != RobotInteractionStep.Dialog &&
+                robotInteractionEvent.Step != RobotInteractionStep.BumperPressed &&
+                robotInteractionEvent.Step != RobotInteractionStep.CapTouched)
+            {
+                return;
+            }
+
+            if (robotInteractionEvent.DialogState?.Step == DialogActionStep.FinalIntent)
             {
                 if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text))
                 {
                     await Misty.SpeakAndListenAsync($"I didn't hear anything. Try something else now!", true, "RepeatPhraseRetry", null);
                 }
-                else if (robotInteractionEvent.DialogState.Contexts.Contains("all-modes") && !robotInteractionEvent.DialogState.Intent.Equals("backward", StringComparison.OrdinalIgnoreCase))
+                else if (robotInteractionEvent.DialogState.Contexts.Contains("all-modes") && !robotInteractionEvent.DialogState.Intent.Equals("backward", StringComparison.OrdinalIgnoreCase) && !robotInteractionEvent.DialogState.Intent.Equals("unknown", StringComparison.OrdinalIgnoreCase))
                 {
-                    PackageData pd = new PackageData(MysticMode.Start, robotInteractionEvent.DialogState.Intent)
+                    PackageData pd = new PackageData(MysticMode.Backward, robotInteractionEvent.DialogState.Intent)
                     {
                         ModeContext = PackageData.ModeContext,
                         Parameters = PackageData.Parameters

@@ -1,21 +1,24 @@
 ﻿namespace MysticCommon
 {
+#pragma warning disable 1591
     public enum MysticMode
     {
-        Idle = 0,
-        Sentry = 1,
-        Settings = 2,
-        Repeat = 3,
-        Backward = 4,
-        RubberDuckey = 5,
-        ConnectToNetwork = 6,
+        Uninitialized = 0,
+        Idle = 1,
+        Start = 2,
+        Settings = 3,
+        Repeat = 4,
+        Backward = 5,
+        RubberDuckey = 6,
         Weather = 7,
         Wander = 8,
         VoiceCommand = 9,
-        FindObject = 10,
-        FindPerson = 11,
-        Uninitialized = 12,
-        MagicEightBall = 13,
-        Start = 14
+        MagicEightBall = 10,
+        TrackObject = 11,
+        FollowPerson = 12,
+        Conversation = 13,
+        FunnyBone = 14,
+        Reverse = 15
     }
+#pragma warning restore 1591
 }

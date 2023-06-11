@@ -12,22 +12,18 @@ using Wander.Types;
 
 namespace Wander
 {
-	public class DriveManagerParameters
-    {
-		public DriveMode DriveMode { get; set; } = DriveMode.Stopped;
-		public bool DebugMode { get; set; } = false;
-	}
-
+	/// <summary>
+	/// TODO Revisit me, this is prolly overly complicated now with new available events
+	/// </summary>
 	public class DriveManager
 	{
-		private IRobotMessenger _misty;
+		private readonly IRobotMessenger _misty;
 		private CurrentObstacleState _currentObstacleState;		
 		private DriveHeartbeat _driveHeartbeat;		
 		private BaseDrive _driveManager;
-
 		private bool _debugMode = true;
-		
-		private DriveMode _driveMode { get; set; } = DriveMode.Stopped;
+
+		public DriveMode DriveMode { get; private set; } = DriveMode.Stopped;
 
 		public INativeRobotSkill Skill { get; private set; } = new NativeRobotSkill("WanderSkill", "d8d01527-f1c2-4f2a-8843-36cb710ecfa7")
 		{
@@ -39,19 +35,14 @@ namespace Wander
 		{
 			_misty = misty;
 			_currentObstacleState = new CurrentObstacleState();
-			_misty.RegisterForSDKLogEvents(PrintMessage);
 
 			_misty.TransitionLED(255, 140, 0, 0, 0, 255, LEDTransition.Breathe, 1000, null);
-			_misty.Wait(3000);
-			_misty.ChangeLED(0, 0, 255, null);
 		}
 
 		public void StartDriving(DriveManagerParameters drivemanagerParameters)
 		{
 			ProcessParameters(drivemanagerParameters);
 
-			_misty.TransitionLED(0, 0, 255, 0, 255, 0, LEDTransition.Breathe, 1000, null);
-			_misty.Wait(3000);
 			_misty.ChangeLED(0, 0, 255, null);
 
 			RegisterEvents();
@@ -60,10 +51,9 @@ namespace Wander
 			_driveHeartbeat.HeartbeatTick += HeartbeatCallback;
 		}
 
-
 		public async void Stop()
 		{
-			_driveMode = DriveMode.Stopped;
+			DriveMode = DriveMode.Stopped;
 			_misty.UnregisterEvent("FrontRight", null);
 			_misty.UnregisterEvent("FrontLeft", null);
 			//_misty.UnregisterEvent("FrontCenter", null);
@@ -77,28 +67,21 @@ namespace Wander
 				_driveHeartbeat.HeartbeatTick -= HeartbeatCallback;
 			}
 			await _misty.StopAsync();
-			_misty.TransitionLED(0, 0, 255, 255, 0, 0, LEDTransition.TransitOnce, 2000, null);
-			await Task.Delay(500);
+			_misty.TransitionLED(0, 0, 255, 255, 0, 0, LEDTransition.TransitOnce, 2000, null);			
 			await _misty.StopAsync(); //just in case...
 		}
 
-
-		private void PrintMessage(object sender, LogMessage message)
-		{
-			Debug.WriteLine($"SDK Message: {message.Message}");
-		}
-		
-		public void HeartbeatCallback(object sender, DateTime _lastHeartbeatTime)
+		public async void HeartbeatCallback(object sender, DateTime _lastHeartbeatTime)
 		{
 			try
             {
 				_misty.SkillLogger.LogInfo($"FrontRightTOF = {_currentObstacleState.FrontRightTOF} - FrontLeftTOF = {_currentObstacleState.FrontLeftTOF} - Paused = {_driveHeartbeat.HeartbeatPaused}");
 				if (!_misty.Wait(0)) { return; }
 
-				switch (_driveMode)
+				switch (DriveMode)
 				{
 					case DriveMode.Careful:
-						_driveManager.Drive();
+						await _driveManager.Drive();
 						break;
 					case DriveMode.Wander:
 						if (_driveHeartbeat.HeartbeatPaused)
@@ -107,7 +90,7 @@ namespace Wander
 						}
 						//Wander2 does a little more complex driving so turn off the hearbeat until this drive action is complete
 						_driveHeartbeat.PauseHeartbeat();
-						_driveManager.Drive();
+						await _driveManager.Drive();
 						_driveHeartbeat.ContinueHeartbeat();
 						break;
 				}
@@ -129,8 +112,8 @@ namespace Wander
 					_misty.SkillLogger.LogLevel = SkillLogLevel.Verbose;
 				}
 
-				_driveMode = wanderParameters.DriveMode;
-				switch (_driveMode)
+				DriveMode = wanderParameters.DriveMode;
+				switch (DriveMode)
 				{
 					case DriveMode.Wander:
 						_driveManager = new WanderDrive(_misty, _currentObstacleState, _debugMode);

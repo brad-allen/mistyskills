@@ -1,27 +1,14 @@
-﻿using MistyRobotics.Common.Data;
-using MistyRobotics.SDK.Events;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Threading.Tasks;
+using MistyRobotics.Common.Data;
+using MistyRobotics.SDK.Events;
 
 namespace MysticCommon
 {
-    public class PackageData
-    {
-        public PackageData(MysticMode mode, string dataName)
-        {
-            Mode = mode;
-            DataName = dataName;
-        }
-        public MysticMode Mode { get; private set; }
-        public string DataName { get; private set; }
-        public IDictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
-        public Context ModeContext { get; set; } = new Context();
-    }
-
     public interface IModePackage
     {
         event EventHandler<PackageData> CallSwitchMode;
+        event EventHandler<PackageData> DataEventPackage;
 
         void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent);
 

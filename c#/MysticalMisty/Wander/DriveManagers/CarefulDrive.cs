@@ -1,4 +1,5 @@
 using MistyRobotics.SDK.Messengers;
+using System.Threading.Tasks;
 using Wander.Types;
 
 namespace Wander.DriveManagers
@@ -9,7 +10,7 @@ namespace Wander.DriveManagers
 		public CarefulDrive(IRobotMessenger robot, CurrentObstacleState wanderState, bool debugMode)
 			: base(robot, wanderState, debugMode) { }
 
-		public override void Drive()
+		public async override Task<bool> Drive()
 		{
 			//Turn every once in a while (if we weren't just turning)
 			if (_locomotionStatus != LocomotionStatus.TurningLeft && _locomotionStatus != LocomotionStatus.TurningRight && _randomGenerator.Next(1, 5) == 1)
@@ -41,6 +42,7 @@ namespace Wander.DriveManagers
 				
 				SendDriveCommand(linear, angular, 0, 3000);
 			}
+			return await Task.FromResult(true);
 		}
 	}
 }

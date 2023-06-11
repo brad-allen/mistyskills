@@ -120,19 +120,20 @@
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Conversations\ConversationHelper.cs" />
-    <Compile Include="Conversations\AllModesConversation.cs" />
-    <Compile Include="Conversations\OneLineConversation.cs" />
-    <Compile Include="Conversations\EmptyConversation.cs" />
     <Compile Include="ModeManager.cs" />
+    <Compile Include="Modes\Common\ModeCommon.cs" />
+    <Compile Include="Modes\WordReverseModePackage.cs" />
     <Compile Include="Modes\BackwardModePackage.cs" />
     <Compile Include="Modes\BaseAllModesPackage.cs" />
     <Compile Include="Modes\BaseModePackage.cs" />
+    <Compile Include="Modes\FollowPersonModePackage.cs" />
     <Compile Include="Modes\IdleModePackage.cs" />
     <Compile Include="Modes\MagicEightBallModePackage.cs" />
+    <Compile Include="Modes\ConversationModePackage.cs" />
+    <Compile Include="Modes\FunnyBoneModePackage.cs" />
     <Compile Include="Modes\RepeatModePackage.cs" />
     <Compile Include="Modes\RubberDuckeyModePackage.cs" />
-    <Compile Include="Modes\SentryModePackage.cs" />
+    <Compile Include="Modes\TrackObjectModePackage.cs" />
     <Compile Include="Modes\SettingsModePackage.cs" />
     <Compile Include="Modes\StartModePackage.cs" />
     <Compile Include="Modes\UnimplementedModePackage.cs" />
@@ -157,6 +158,10 @@
     <ProjectReference Include="..\MysticCommon\MysticCommon.csproj">
       <Project>{1c176c40-ee6d-458a-991a-91d0200905a1}</Project>
       <Name>MysticCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\MysticTools\MysticTools.csproj">
+      <Project>{2FE096D7-C89C-4DD9-9E96-E03F48EE34C9}</Project>
+      <Name>MysticTools</Name>
     </ProjectReference>
     <ProjectReference Include="..\Wander\Wander.csproj">
       <Project>{75fa1eb0-aa82-484d-b3f3-4b3a7fbc3ef2}</Project>

@@ -1,4 +1,5 @@
 using MistyRobotics.SDK.Messengers;
+using System.Threading.Tasks;
 using Wander.Types;
 
 namespace Wander.DriveManagers
@@ -11,22 +12,23 @@ namespace Wander.DriveManagers
 		public WanderDrive(IRobotMessenger robot, CurrentObstacleState wanderState, bool debugMode)
 			: base(robot, wanderState, debugMode) {}
 
-		public override void Drive()
+		public async override Task<bool> Drive()
 		{		
 			//Back up if edge sensors triggered
 			if (_currentObstacleState.FrontRightEdgeTOF > 0.05 || _currentObstacleState.FrontLeftEdgeTOF > 0.05)
 			{
 				int backupTime = _randomGenerator.Next(1000, 2000);
 				SendDriveCommand(-20, 0, 0);
-				_misty.Wait(backupTime);
+				await Task.Delay(backupTime);
 
 				int turnTime = _randomGenerator.Next(2500, 3000);
-				SendDriveCommand(0, _randomGenerator.Next(20, 25), _currentObstacleState.FrontLeftEdgeTOF > _currentObstacleState.FrontRightEdgeTOF ? 1 : -1);
-				_misty.Wait(turnTime);
-				return;
+				SendDriveCommand(0, _randomGenerator.Next(20, 25), _currentObstacleState.FrontLeftEdgeTOF > _currentObstacleState.FrontRightEdgeTOF ? 1 : -1);				
+				await Task.Delay(turnTime);
 			}
 
 			var closestFrontDistance = _currentObstacleState.FrontRightTOF < _currentObstacleState.FrontLeftTOF ? _currentObstacleState.FrontRightTOF : _currentObstacleState.FrontLeftTOF;
+			
+			//Center TOF can be iffy...
 			//closestFrontDistance = closestFrontDistance < _currentObstacleState.FrontCenterTOF ? closestFrontDistance : _currentObstacleState.FrontCenterTOF;
 
 			var LRDifference = _currentObstacleState.FrontLeftTOF - _currentObstacleState.FrontRightTOF;
@@ -36,13 +38,13 @@ namespace Wander.DriveManagers
 			if (_currentObstacleState.FrontRightBumpContacted || _currentObstacleState.FrontLeftBumpContacted)
 			{
 				SendDriveCommand(-15, 30, LRDifference);
-				_misty.Wait(750);
+				await Task.Delay(750);
 			}
 
 			if (_currentObstacleState.BackRightBumpContacted || _currentObstacleState.BackLeftBumpContacted)
 			{
 				SendDriveCommand(15, 30, LRDifference);
-				_misty.Wait(750);
+				await Task.Delay(750);
 			}
 
 			//TODO Update for m/s driving vs percent driving
@@ -54,16 +56,16 @@ namespace Wander.DriveManagers
 				if (_randomGenerator.Next(1, 4) == 1)
 				{
 					SendDriveCommand(-15, 50, LRDifference);
-					_misty.Wait(1500);
+					await Task.Delay(1500);
 
 					var angular = _randomGenerator.Next(25, 35);
 					SendDriveCommand(0, angular, LRDifference);
-					_misty.Wait(1000);
+					await Task.Delay(1000);
 				}
 				else
 				{
 					SendDriveCommand(-20, 30, LRDifference);
-					_misty.Wait(2000);
+					await Task.Delay(2000);
 				}
 			}
 			else if (closestFrontDistance < 0.225)
@@ -72,7 +74,7 @@ namespace Wander.DriveManagers
 				{
 					var angular = _randomGenerator.Next(20, 30);
 					SendDriveCommand(0, angular, LRDifference);
-					_misty.Wait(1500);
+					await Task.Delay(1500);
 				}
 				
 				//Randomly do other stuff once in a while
@@ -80,12 +82,12 @@ namespace Wander.DriveManagers
 				{
 					var angular = _randomGenerator.Next(20, 40);
 					SendDriveCommand(-5, angular, LRDifference);
-					_misty.Wait(1500);
+					await Task.Delay(1500);
 				}
 				else
 				{
 					SendDriveCommand(-15, 30, LRDifference);
-					_misty.Wait(500);
+					await Task.Delay(500);
 				}
 			}
 			else
@@ -143,6 +145,7 @@ namespace Wander.DriveManagers
 
 				SendDriveCommand(linear, angular, LRDifference);
 			}
+			return true;
 		}
 
 		#region IDisposable Support

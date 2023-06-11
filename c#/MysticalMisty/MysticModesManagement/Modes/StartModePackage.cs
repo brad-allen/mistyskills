@@ -9,30 +9,34 @@ using MistyRobotics.SDK.Events;
 using MistyRobotics.SDK.Messengers;
 using MistyRobotics.SDK.Responses;
 using MysticCommon;
-using MysticModesManagement.Conversations;
-
 
 namespace MysticModesManagement
 {
     public class StartModePackage : BaseAllModesPackage
     {
         public override event EventHandler<PackageData> CallSwitchMode;
+        private ModeCommon _modeCommon;
 
-        public StartModePackage(IRobotMessenger misty) : base(misty) {}
+        public StartModePackage(IRobotMessenger misty) : base(misty) 
+        {
+            _modeCommon = ModeCommon.LoadCommonOptions(misty);
+        }
 
         public override async Task<ResponsePacket> Start(PackageData packageData)
         {
             await base.Start(packageData);
+            _ = _modeCommon.ShowWarningLayer();
             await CreateActions();
             Misty.StartAction(MysticWake, false, null);
-            await Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
+            //await Misty.StopKeyPhraseRecognitionAsync()
+            await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
             Misty.Speak("Okay, when you are ready, say, Hey Misty, and tell me what you want to do.", true, "sayheyMisty", null);
             return new ResponsePacket { Success = true };
         }
 
         public override async Task<ResponsePacket> Stop()
         {
-            //await BreakdownMode();
+            await _modeCommon.DeleteWarningLayer();
             return await Task.FromResult(new ResponsePacket { Success = true });   
         }
 
@@ -61,10 +65,11 @@ namespace MysticModesManagement
             //IGetActionCommandsResponse actionCommands = await Misty.GetActionCommandsAsync();
 
             //Create action using action commands
+            //LED-PATTERN transition options: None, TransitOnce, Breathe, Blink
             await Misty.CreateActionAsync(MysticWake,
  @"HEAD:0,0,0,1000;
 ARMS:-55,0,500;
-LED-PATTERN:255,0,0,0,0,255,1000,breathe;
+LED-PATTERN:255,0,0,0,0,255,breathe,1000;
 PAUSE:500;
 ARMS:0,-55,500;
 PAUSE:500;
@@ -72,7 +77,7 @@ ARMS:-55,0,500;
 PAUSE:500;
 ARMS:0,-55,500;
 HEAD:-20,5,20,500;
-LED-PATTERN:255,0,0,255,0,0,1000,breathe;
+LED-PATTERN:255,0,0,255,0,0,breathe,1000;
 PAUSE:500;
 ARMS:-55,90,500;
 HEAD:-20,5,-20,1200;
@@ -81,28 +86,57 @@ HEAD:-20,0,0,750;
 ARMS:90,90,750;
 PAUSE:750;
 ARMS:-55,-55,500;
-HEAD:-100,0,0,500;
-LED-PATTERN:255,0,0,0,0,255,1000,transitonce;
+HEAD:-10,0,0,500;
+LED-PATTERN:255,0,0,0,0,255,transitonce,1000;
 ", true);
         }
 
-        public override void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
+        public async override void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
             //Process
             try
             {
-                //Note, to get Dialog events, you must be in a conversation at this time, otherwise use the voicecommand callbacks
-                if (robotInteractionEvent.Step == RobotInteractionStep.Dialog && robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.FinalIntent)
+                if (robotInteractionEvent.Step != RobotInteractionStep.Dialog &&
+                   robotInteractionEvent.Step != RobotInteractionStep.BumperPressed &&
+                   robotInteractionEvent.Step != RobotInteractionStep.CapTouched)
                 {
+                    return;
+                }
+
+                if (robotInteractionEvent.Step == RobotInteractionStep.Dialog && robotInteractionEvent.DialogState?.Step == DialogActionStep.CompletedSpeaking)
+                {
+                    _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
+                }
+
+                if (robotInteractionEvent.Step == RobotInteractionStep.CapTouched && robotInteractionEvent.CapTouchState.Scruff == TouchSensorOption.Contacted)
+                {
+                    Misty.StartAction("body-reset", true, null);
+                    PackageData pd = new PackageData(MysticMode.TrackObject, "idle")
+                    {
+                        ModeContext = PackageData.ModeContext,
+                        Parameters = PackageData.Parameters
+                    };
+
+                    CallSwitchMode?.Invoke(this, pd);
+                    return;
+                }
+
+
+                //Note, to get Dialog events, you must be in a conversation at this time, otherwise use the voicecommand callbacks
+                if (robotInteractionEvent.Step == RobotInteractionStep.Dialog && robotInteractionEvent.DialogState?.Step == DialogActionStep.FinalIntent)
+                {
+                    _ = _modeCommon.WriteToWarningLayer(robotInteractionEvent.DialogState.Text);
                     if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text))
                     {
+                        //await Misty.StopKeyPhraseRecognitionAsync()
+                        await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
                         _ = Misty.SpeakAsync($"I didn't hear anything. Say, Hey Misty, and try again!", true, "StartPackageRetry");
-                        _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
                     }
                     else if (robotInteractionEvent.DialogState.Intent.Equals("unknown", StringComparison.OrdinalIgnoreCase))
                     {
+                        //await Misty.StopKeyPhraseRecognitionAsync()
+                        await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
                         _ = Misty.SpeakAsync($"Sorry! I didn't understand that request. Did you say {robotInteractionEvent.DialogState.Text}? Say hey misty and try again.", true, "StartPackageRetry2");
-                        _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
                     }
                     else if (robotInteractionEvent.DialogState.Contexts.Contains("all-modes") && !robotInteractionEvent.DialogState.Intent.Equals("start", StringComparison.OrdinalIgnoreCase))
                     {
@@ -113,24 +147,29 @@ LED-PATTERN:255,0,0,0,0,255,1000,transitonce;
                         };
 
                         CallSwitchMode?.Invoke(this, pd);
+                        return;
                     }
                     else
                     {
+
+                        //await Misty.StopKeyPhraseRecognitionAsync()
+                        await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
                         _ = Misty.SpeakAsync($"Sorry! I didn't understand that request. Did you say {robotInteractionEvent.DialogState.Text}? Say hey misty and try again.", true, "StartPackageRetry2");
-                        _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
                     }
                 }
                 else if (robotInteractionEvent.Step == RobotInteractionStep.BumperPressed)
                 {
                     _ = Misty.SpeakAsync($"You pressed a bumper.", true, "BumperPress");
+                    //await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
                 }
             }
             catch (Exception ex)
             {
-
+                Misty.SkillLogger.LogError($"Failed handling robot interaction callback.", ex);
             }
             finally
             {
+                
             }            
         }
     }

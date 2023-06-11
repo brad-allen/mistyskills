@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using ConversationHelpers;
 using MistyRobotics.Common.Data;
 using MistyRobotics.SDK.Events;
 using MistyRobotics.SDK.Messengers;
 using MysticCommon;
-using MysticModesManagement.Conversations;
 
 namespace MysticModesManagement
 {
@@ -59,9 +59,7 @@ namespace MysticModesManagement
 
         public override void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
-
-        }
-
-       
+            base.RobotInteractionCallback(robotInteractionEvent);
+        }       
     }
 }

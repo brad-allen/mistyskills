@@ -2,36 +2,64 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MistyRobotics.Common.Data;
+using MistyRobotics.Common.Types;
 using MistyRobotics.SDK.Events;
 using MistyRobotics.SDK.Messengers;
 using MysticCommon;
+using Weather.OpenWeather;
 
 namespace MysticModesManagement
 {
     public class WeatherModePackage : BaseAllModesPackage
     {
-        private bool _repeatTime;
-        private IList<string> _responses1 = new List<string>();
-        private IList<string> _responses2 = new List<string>();
-        private Random _random = new Random();
+        public override event EventHandler<PackageData> CallSwitchMode;
         public WeatherModePackage(IRobotMessenger misty) : base(misty) {}
+        public EnglishWeatherManager _weatherManager;
 
         public override async Task<ResponsePacket> Start(PackageData packageData)
         {
-      
-           // _ = Misty.RegisterVoiceRecordEvent(0, true, "Test-is-this-needed", null); //shouldn't be needed, but might be still - oops
-            _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
-            _ = Misty.SpeakAsync($"Say, Hey Misty, and talk to me!", true, "Weather");
+            await base.Start(packageData);
+
+            if(packageData.Parameters.TryGetValue("OpenWeatherKey", out object code))
+            {
+                try
+                {
+                    _ = Misty.SpeakAsync("Getting the weather.", true, "WeatherPhraseStart");
+
+                    if(!packageData.Parameters.TryGetValue("Country", out object countryCode))
+                    {
+                        countryCode = "US";
+                    }
+
+                    if (!packageData.Parameters.TryGetValue("City", out object cityCode))
+                    {
+                        cityCode = "Boulder";
+                    }
+
+                    _weatherManager = new EnglishWeatherManager(Misty, (string)code, null, (string)countryCode, (string)cityCode);
+
+                    //Fixes around async still, for now, give it a moment to get weather...
+                    await Task.Delay(2500);
+
+                    _ = Misty.SpeakAsync(_weatherManager.GetWeatherString(), true, "WeatherPhraseSaid");
+                }
+                catch (Exception ex)
+                {
+                    _ = Misty.SpeakAsync("Sorry, I couldn't get the weather with your key.", true, "WeatherPhraseSaid");
+                    Misty.SkillLogger.Log("Failed getting open weather info with key", ex);
+                }
+
+            }
+            else
+            {
+                _ = Misty.SpeakAsync("Sorry, I need an open weather key to tell you the weather.", true, "WeatherPhraseSaid");
+            }
 
             return new ResponsePacket { Success = true };
         }
 
         public override async Task<ResponsePacket> Stop()
         {
-            //Do cleanup here...
-            _repeatTime = false;
-            Misty.UnregisterEvent("Test-is-this-needed", null);
-            //TODO make a disposable?
             return await Task.FromResult(new ResponsePacket { Success = true });
         }
 
@@ -40,45 +68,36 @@ namespace MysticModesManagement
             List<string> samples = new List<string>();
             samples.Add("weather");
             samples.Add("whether");
-            samples.Add("temperature");
+            samples.Add("ether");
+            samples.Add("the temperature");
             samples.Add("cold outside");
             samples.Add("hot outside");
 
             intent = new Intent
             {
-                Name = "Weather",
+                Name = "weather",
                 Samples = samples,
                 Entities = new List<Entity>()
             };
             return true;
         }
 
-        public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
+        public override void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
-            if (_repeatTime && robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.FinalIntent)
+            if ((robotInteractionEvent.Step == RobotInteractionStep.CapTouched && robotInteractionEvent.CapTouchState.Scruff == TouchSensorOption.Contacted) ||
+                (robotInteractionEvent.Step == RobotInteractionStep.Dialog &&
+                robotInteractionEvent.DialogState.Step == DialogActionStep.CompletedSpeaking &&
+                (string)robotInteractionEvent.DialogState.Data == "WeatherPhraseSaid"))
             {
-                if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text))
-                {
-                    _ = Misty.SpeakAsync($"I didn't hear anything. Say, Hey Misty, and try again!", true, "WeatherPhraseRetry");
-                }
-                else
-                {
-                    try
-                    {
-                        int random1 = _random.Next(0, _responses1.Count);
-                        int random2 = _random.Next(0, _responses2.Count);
-                        string response1 = _responses1[random1];
-                        string response2 = _responses2[random2];
-                        _ = Misty.SpeakAsync($"{response1}. {robotInteractionEvent.DialogState.Text}. {response2}", true, "WeatherPhrase");
-                    }
-                    catch
-                    {
-                        //should never happen
-                        _ = Misty.SpeakAsync($"All my ones and zeroes are acting strange. Say, Hey Misty, and speak to me!", true, "WeatherPhraseError");                        
-                    }
-                }
 
-                _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
+                PackageData pd = new PackageData(MysticMode.Weather, "Idle")
+                {
+                    ModeContext = PackageData.ModeContext,
+                    Parameters = PackageData.Parameters
+                };
+
+                CallSwitchMode?.Invoke(this, pd);
+                return;
             }
         }
     }

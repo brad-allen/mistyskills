@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MistyRobotics.Common.Data;
+using MistyRobotics.Common.Types;
 using MistyRobotics.SDK.Events;
 using MistyRobotics.SDK.Messengers;
 using MysticCommon;
@@ -11,29 +13,23 @@ namespace MysticModesManagement
 {
     public class WanderModePackage : BaseModePackage
     {
-        private bool _repeatTime;
-        private IList<string> _responses1 = new List<string>();
-        private IList<string> _responses2 = new List<string>();
-        private Random _random = new Random();
         private DriveManager _driveManager;
+        public override event EventHandler<PackageData> CallSwitchMode;
 
         public WanderModePackage(IRobotMessenger misty) : base(misty) {}
 
         public override async Task<ResponsePacket> Start(PackageData packageData)
         {
+            await base.Start(packageData);
 
-            _responses1.Add("Signs point to Yes.");
-            _responses1.Add("Signs seem to indicate No.");
-
-            _repeatTime = true;
-       //     _ = Misty.RegisterVoiceRecordEvent(0, true, "Test-is-this-needed", null); //shouldn't be needed, but might be still - oops
-
-                //listen for stop
-            _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
+            //await Misty.StopKeyPhraseRecognitionAsync()
+            await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
+            _ = Misty.SpeakAsync($"I am going to try and drive around. Please make sure there is good light, and I would prefer an open area! Driving in 10 seconds. To get me to stop, grab my scruff or say, Hey Misty, stop!", true, "Wander");
             
-            _ = Misty.SpeakAsync($"To get me to stop, grab my scruff or say, Hey Misty, stop!", true, "Wander");
+            await Task.Delay(10000);
 
             _driveManager = new DriveManager(Misty);
+            _paused = false;
             _driveManager.StartDriving(
                 new DriveManagerParameters
                 {
@@ -46,10 +42,6 @@ namespace MysticModesManagement
 
         public override async Task<ResponsePacket> Stop()
         {
-            //Do cleanup here...
-            _repeatTime = false;
-            Misty.UnregisterEvent("Test-is-this-needed", null);
-            //TODO make a disposable?
             return await Task.FromResult(new ResponsePacket { Success = true });
         }
 
@@ -57,62 +49,173 @@ namespace MysticModesManagement
         {
             List<string> samples = new List<string>();
             samples.Add("wander");
+            samples.Add("wonder");
+            samples.Add("wondering");
             samples.Add("walk around");
             samples.Add("go away");
+            samples.Add("drive");
+            samples.Add("patrol");
 
             intent = new Intent
             {
-                Name = "Wander",
+                Name = "wander",
                 Samples = samples,
                 Entities = new List<Entity>()
             };
             return true;
         }
 
+        private bool _paused;
+
         public override async void RobotInteractionCallback(IRobotInteractionEvent robotInteractionEvent)
         {
-            if (robotInteractionEvent.DialogState?.Step == MistyRobotics.Common.Types.DialogActionStep.FinalIntent)
+            if(_driveManager == null)
+            {
+                //not ready yet!
+                return;
+            }
+
+            if (robotInteractionEvent.Step != RobotInteractionStep.Dialog &&
+                robotInteractionEvent.Step != RobotInteractionStep.BumperPressed &&
+                robotInteractionEvent.Step != RobotInteractionStep.CapTouched)
+            {
+                return;
+            }
+
+            if (_driveManager.DriveMode == Wander.Types.DriveMode.Stopped)
+            {
+                if(robotInteractionEvent.BumperState.BackLeft == TouchSensorOption.Contacted || robotInteractionEvent.BumperState.BackRight == TouchSensorOption.Contacted)
+                {
+
+                    //await Misty.StopKeyPhraseRecognitionAsync()
+                    await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
+                    _ = Misty.SpeakAsync("Wandering in 10 seconds. When you are ready Say, Hey Misty, and tell me to stop, drive slow, or pick a new mode!", true, "WanderPhraseError");
+                    
+                    await Task.Delay(10000);
+                    _driveManager.StartDriving(
+                        new DriveManagerParameters
+                        {
+                            DriveMode = Wander.Types.DriveMode.Wander,
+                            DebugMode = false
+                        });
+                }
+                if (robotInteractionEvent.BumperState.FrontLeft == TouchSensorOption.Contacted || robotInteractionEvent.BumperState.FrontRight == TouchSensorOption.Contacted)
+                {
+                    //await Misty.StopKeyPhraseRecognitionAsync()
+                    await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
+                    _ = Misty.SpeakAsync("Driving carefully in 10 seconds. When you are ready Say, Hey Misty, and tell me to stop, wander, or pick a new mode!", true, "WanderPhraseError");
+                    
+                    await Task.Delay(10000);
+                    _driveManager.StartDriving(
+                        new DriveManagerParameters
+                        {
+                            DriveMode = Wander.Types.DriveMode.Wander,
+                            DebugMode = false
+                        });
+                }
+            }
+            
+            if (robotInteractionEvent.CapTouchState.Scruff == TouchSensorOption.Contacted)
+            {
+                _driveManager.Stop();
+
+                //await Misty.StopKeyPhraseRecognitionAsync()
+                await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
+                _ = Misty.SpeakAsync("Stopping. When you are ready, Press my bumper, or Say, Hey Misty, and tell me to wander, drive slow, or pick a new mode!", true, "WanderPhraseError");
+                
+                return;
+            }
+
+            if (robotInteractionEvent.DialogState?.Step == DialogActionStep.StartedRecording)
+            {
+                _paused = true;
+                _driveManager.Stop();
+            }
+
+            if (robotInteractionEvent.DialogState?.Step == DialogActionStep.FinalIntent)
             {
                 if (string.IsNullOrWhiteSpace(robotInteractionEvent.DialogState.Text))
                 {
-                    // if unsure, ask again while stopped
-
+                    //await Misty.StopKeyPhraseRecognitionAsync()
+                    await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
+                    _ = Misty.SpeakAsync($"I didn't hear anything. Say, Hey Misty, and speak to me!", true, "WanderPhraseError");                    
+                }                
+                //hacky voice commands by string comparisons - TODO make context
+                else if(robotInteractionEvent.DialogState.Text.Contains("stop"))
+                {
                     _driveManager.Stop();
 
-                    _ = Misty.SpeakAsync($"I didn't hear anything. Say, Hey Misty, and try again!", true, "WanderPhraseRetry");
+                    _ = Misty.SpeakAsync("Stopping. When you are ready Say, Hey Misty, and tell me to wander, drive slow, or pick a new mode!", true, "WanderPhraseError");
+
+                    //await Misty.StopKeyPhraseRecognitionAsync()
+                    await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
+                    return;
+                }
+                else if (robotInteractionEvent.DialogState.Text.Contains("start") && robotInteractionEvent.DialogState.Text.Contains("driving") ||
+                    (robotInteractionEvent.DialogState.Text.Contains("begin") && robotInteractionEvent.DialogState.Text.Contains("driving") ||
+                    robotInteractionEvent.DialogState.Text.Contains("wander") ||
+                    (robotInteractionEvent.DialogState.Text.Contains("drive"))))
+                {
+                    _ = Misty.SpeakAsync("Wandering in 10 seconds. When you are ready Say, Hey Misty, and tell me to stop, drive slow, or pick a new mode!", true, "WanderPhraseError");
+
+                    //await Misty.StopKeyPhraseRecognitionAsync()
+                    await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
+                    await Task.Delay(10000);
+
+                    _driveManager.StartDriving(
+                        new DriveManagerParameters
+                        {
+                            DriveMode = Wander.Types.DriveMode.Wander,
+                            DebugMode = false
+                        });
+                }
+                else if (robotInteractionEvent.DialogState.Text.Contains("be careful") ||
+                    (robotInteractionEvent.DialogState.Text.Contains("slow")))
+                {
+                    _ = Misty.SpeakAsync("Driving carefully in 10 seconds. When you are ready Say, Hey Misty, and tell me to stop, wander, or pick a new mode!", true, "WanderPhraseError");
+
+                    //await Misty.StopKeyPhraseRecognitionAsync()
+                    await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
+                    await Task.Delay(10000);
+
+                    _driveManager.StartDriving(
+                        new DriveManagerParameters
+                        {
+                            DriveMode = Wander.Types.DriveMode.Careful,
+                            DebugMode = false
+                        });
+                }
+                else if (robotInteractionEvent.DialogState.Contexts.Contains("all-modes") && !robotInteractionEvent.DialogState.Intent.Equals("Wander", StringComparison.OrdinalIgnoreCase) && !robotInteractionEvent.DialogState.Intent.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+                {
+                    PackageData pd = new PackageData(MysticMode.Wander, robotInteractionEvent.DialogState.Intent)
+                    {
+                        ModeContext = PackageData.ModeContext,
+                        Parameters = PackageData.Parameters
+                    };
+
+                    CallSwitchMode?.Invoke(this, pd);
+                    return;
                 }
                 else
                 {
-                    try
-                    {
+                    _ = Misty.SpeakAsync($"Not sure I understood that!. Say, Hey Misty, and speak to me!", true, "WanderPhraseError");
 
-                        //speech event, was it stop?
-
-                        _driveManager.Stop();
-
-                        //if not, process, and then continue
-                        await Task.Delay(5000); //TODO
-
-                        _driveManager.StartDriving(new DriveManagerParameters
-                        {
-                            DriveMode = Wander.Types.DriveMode.Careful,
-                            DebugMode = true
-                        });
-
-                    }
-                    catch
-                    {
-                        //should never happen
-                        _ = Misty.SpeakAsync($"All my ones and zeroes are acting strange. Say, Hey Misty, and speak to me!", true, "WanderPhraseError");                        
-                    }
+                    //await Misty.StopKeyPhraseRecognitionAsync()
+                    await Misty.StartKeyPhraseRecognitionVoskAsync(true, 10000, 5000);
                 }
-
-                _ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 20000, 4000);
+                return;
             }
-            //else scruff?
-                //motors are stopped when grabbed, but need to stop wander process too or it will start right back up
-
-            //actual wander handled in wander project, ignore other events
+            if (_paused && robotInteractionEvent.DialogState?.Step == DialogActionStep.CompletedSpeaking)
+            {
+                _paused = false;
+                //_ = Misty.StartKeyPhraseRecognitionVoskAsync(true, 5000, 4000);
+                _driveManager.StartDriving(
+                    new DriveManagerParameters
+                    {
+                        DriveMode = _driveManager.DriveMode,
+                        DebugMode = false
+                    });
+            }
         }
     }
 }
