@@ -209,6 +209,7 @@ namespace helloMistyUWP
 					if (_followFace)
 					{
 						_misty.StartFaceRecognition(null);
+						_misty.StartAction("hello-misty.action.follow-face", true, null);
 					}
 					else
 					{
@@ -526,17 +527,18 @@ namespace helloMistyUWP
 			try
 			{
 				string _theJoke = "";
-				if (_random.Next(0, 3) < 2)
-				{
+				//if (_random.Next(0, 3) < 2)
+				//{
 					SingleJokeFormat sjf = await _funnyBoneAPI.GetDeveloperJoke();
 					_theJoke = sjf.Joke;
-				}
+				/*}
 				else
 				{
+					//These can be over the top. Uncomment at your own risk.
 					//and throw in a chuck norris joke once in a while
 					ChuckNorrisJokeFormat cnjf = await _funnyBoneAPI.GetChuckNorrisJoke();
 					_theJoke = cnjf.Value;
-				}
+				}*/
 
 				if (string.IsNullOrWhiteSpace(_theJoke))
 				{
