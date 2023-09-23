@@ -27,7 +27,6 @@ namespace helloMistyUWP
 		private IRobotMessenger _misty;
 		private AssetWrapper _assetWrapper;
 		private ISDKLogger _logger;
-		private ISkillStorage _simpleStorage;
 		private string _currentIp;
 		private int _ipChecks = 0;
 		private Timer _displayedTextTimer;
@@ -35,7 +34,6 @@ namespace helloMistyUWP
 		private Random _random = new Random();
 		private EnglishTimeManager _timeManager;
 		private IDictionary<string, object> _parameters = new Dictionary<string, object>();
-		private IDictionary<string, object> _skillData = new Dictionary<string, object>();
 		private FunnyBoneAPI _funnyBoneAPI { get; set; } = new FunnyBoneAPI();
 		private EnglishWeatherManager _weatherManager;
 		private IList<string> _responses1 = new List<string>();
@@ -120,56 +118,6 @@ namespace helloMistyUWP
 				await Task.Delay(2000);
 				_assetWrapper.PlaySystemSound(SystemSound.Sleepy);
 				await _misty.StartKeyPhraseRecognitionVoskAsync(true, 5000, 3000);
-
-				//Example using simple data store code
-				//Load up simple storage DBs based upon if password passed in
-				if (_parameters.TryGetValue("password", out object password))
-				{
-					try
-					{
-						_password = (string)password;
-						_simpleStorage = await EncryptedStorage.GetDatabase("helloMistyDataEnc", _password);
-					}
-					catch (Exception ex)
-					{
-						_logger.Log("Couldn't obtain encrypted database. Using unencrypted data store.", ex);
-						_simpleStorage = SkillStorage.GetDatabase("helloMistyData");
-					}
-				}
-				else
-				{
-					_password = "no-password";
-					_logger.Log("No password in startup parameters.");
-					_simpleStorage = SkillStorage.GetDatabase("helloMistyData");
-				}
-
-				//TODO Store long term items here                 
-				if (_simpleStorage != null)
-				{
-					int startupCount = 0;
-					//Load the data from on bot simple storage
-					_skillData = await _simpleStorage.LoadDataAsync();
-
-					//See if field already exists
-					if (_skillData.TryGetValue("StartupCount", out object startupCountObject))
-					{
-						//if so, convert to proper type to increment
-						startupCount = Convert.ToInt32(startupCountObject);
-						startupCount++;
-					}
-					else
-					{
-						//if not, first time!
-						startupCount = 1;
-					}
-
-					//Update count in dictionary
-					_skillData.Remove("StartupCount");
-					_skillData.Add("StartupCount", startupCount);
-
-					//Save back to file
-					await _simpleStorage.SaveDataAsync(_skillData);
-				}
 				
 				//Create and start an action that uses the alpha follow-face functionality
 				await _misty.CreateActionAsync("hello-misty.action.follow-face", "FOLLOW-FACE;", true);
