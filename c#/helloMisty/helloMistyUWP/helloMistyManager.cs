@@ -39,6 +39,7 @@ namespace helloMistyUWP
 		private FunnyBoneAPI _funnyBoneAPI { get; set; } = new FunnyBoneAPI();
 		private EnglishWeatherManager _weatherManager;
 		private IList<string> _responses1 = new List<string>();
+		private bool _followFace;
 
 		private readonly string DisplayedTextLayer = "DisplayedTextLayer";
 
@@ -172,11 +173,12 @@ namespace helloMistyUWP
 				
 				//Create and start an action that uses the alpha follow-face functionality
 				await _misty.CreateActionAsync("hello-misty.action.follow-face", "FOLLOW-FACE;", true);
-				await _misty.StartActionAsync("hello-misty.action.follow-face", true);
+				_misty.StartAction("hello-misty.action.follow-face", true, null);
 				//Start Face Rec to track and add that data to the event
-				await _misty.StartFaceRecognitionAsync();
+				_misty.StartFaceRecognition(null);
+				_followFace = true;
 
-				_ = _misty.SpeakAsync("Okay, ready to go. Use my bumpers or cap touch, or say, Hey Misty, what's the time, weather, or day, or ask me to dance, or tell a joke.", true, "Started");
+				_misty.Speak("Okay, ready to go. Use my bumpers or cap touch, or say, Hey Misty, what's the time, weather, or day, or ask me to dance, or tell a joke.", true, "Started", null);
 				//Okay, events should handle it from here
 				
 				return true;
@@ -202,7 +204,18 @@ namespace helloMistyUWP
 			switch(robotInteractionEvent.Step)
 			{
 				case RobotInteractionStep.BumperPressed:
-					if(robotInteractionEvent.BumperState.FrontLeft == TouchSensorOption.Contacted)
+
+					_followFace = !_followFace;
+					if (_followFace)
+					{
+						_misty.StartFaceRecognition(null);
+					}
+					else
+					{
+						_misty.StopFaceRecognition(null);
+					}
+					
+					if (robotInteractionEvent.BumperState.FrontLeft == TouchSensorOption.Contacted)
 					{
 						TimeObject to = _timeManager.GetTimeObject();
 						if (to != null && !string.IsNullOrWhiteSpace(to.SpokenTime))
@@ -430,7 +443,7 @@ namespace helloMistyUWP
 								},
 								null);
 							
-							await _misty.DisplayTextAsync(robotInteractionEvent.DialogState.Text, "Heard");
+							await _misty.DisplayTextAsync(robotInteractionEvent.DialogState.Text, DisplayedTextLayer);
 							_responses1.Add("I believe the answer to that is 42. Or I didn't hear the request correctly.");
 							_responses1.Add("I'd say that signs point to Yes. As in yes, I am very confused about what you said.");
 							_responses1.Add("I'd say that Signs seem to indicate No. As in no, I didn't understand you.");
@@ -639,7 +652,7 @@ namespace helloMistyUWP
 			{
 				_ = _misty.ChangeLEDAsync(255, 0, 0);
 			}
-			else if (text.Contains("blue") )
+			else if (text.Contains("blue") || text.Contains("blew"))
 			{
 				_ = _misty.ChangeLEDAsync(0, 0, 255);
 			}

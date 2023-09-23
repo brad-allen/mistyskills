@@ -28,22 +28,22 @@ Be aware that I upload and replace the default listening beep setting that Misty
 I also adjust the tally light settings so it is only on when listening.
 
 ```await _misty.SetNotificationSettingsAsync(false, true, true, "short-beep.mp3");```
+with parameters (revert to default, led enabled, key phrase enabled, key phrase "listening" audio file)
+Setting the first parameter to true will set Misty to their default notification settings.
 
 I do attempt to change it back when the skill is cancelled, but if you exit the skill without cancelling or other unexpected things happen, it may not change.
 You can change this line, or call it from Misty's API Explorer in the web tools, to update the listening notification settings. 
 									
-with parameters (revert to default, led enabled, key phrase enabled, key phrase "listening" audio file)
-Setting the first parameter to true will set Misty to their default notification settings.
-
 This skill also auto-uploads a few assets from the helloMisty/Assets/SkillAssets folder in this repo. See below for more info...
 
 -----------------------------------------------
 
-This skill starts up as a 'startup skill', so if you have the Meet Misty OOBE or any other startup skills, you may want to change that setting so it, or the other skill(s), only starts manually.
+This skill starts up as a 'startup skill', so if you have the Meet Misty OOBE or any other startup skills, you may want to change that setting so it, or the other skill(s), only start manually, or they may interfere with each other.
 
 -----------------------------------------------
 KNOWN BUGS AND WORKAROUNDS
-A lot of this functionality is very Alpha, and there are a few bugs in the C# SDK implementation of it requiring some temporary workarounds.
+Built-in ASR, NLP, Conversations, etc, are Alpha features, and may change at any time.
+	There are a few bugs in the C# SDK implementation of it requiring some temporary workarounds.
 
 	** TrainNlpContext - Training Context Bug Workaround			
 			Contexts are used for Misty’s conversational speech. Conversational Misty is an alpha feature, and may change as needed in the future. 
@@ -51,7 +51,7 @@ A lot of this functionality is very Alpha, and there are a few bugs in the C# SD
 			One way to work around this is to use a tool such as Postman, Advanced REST Client or other REST system to POST commands to the robot.
 
 			For this skill here is an English context you need so Misty can understand what you want. Feel free to change it as needed!
-			Right now, "help" is ignored as an option in the skill
+			Right now, "help" is ignored as an option in the skill, as an exercise for the user :)
 
 			POST http://<misty-ip>/api/dialogs/train
 
@@ -95,19 +95,20 @@ A lot of this functionality is very Alpha, and there are a few bugs in the C# SD
 -----------------------------------------------
 STARTING PARAMETERS
 
-You can pass in these parameters. On the Skill Management page, click on the gear next to the skill you want to run.
-	Add the parameters there, in name and value columns, and start the skill.
+You can pass in these parameters when you start the skill. 
+	On the Skill Management page, click on the gear next to the skill you want to run.
+	Add the parameters there, in name and value columns, and start the skill (you can also pass in external events to a skill on the advanced page ;) )
 
  Weather Mode needs these items from OpenWeather if you want to use it. You can get a free key if you don't use it too much (https://openweathermap.org/appid).
-	* OpenWeatherKey -- must be passed in to use this mode successfully
-	* CountryCode -- defaults to 'US', you can always change it in your code
-	* CityCode -- defaults to 'Boulder' - Boulder, CO, cuz that's where I am, you can always change it in your code
+	* OpenWeatherKey -- must be passed in to use this mode successfully, you will get this after you sign up
+	* CountryCode -- defaults to 'US', you can always change it in your code, or pass it in if needed.
+	* CityCode -- defaults to 'Boulder' - Boulder, CO, cuz that's where I am, you can always change it in your code to your location!
 
 -----------------------------------------------
 
 AssetWrapper and extra Misty Assets
 
-* AssetWrapper is an example library to show one way to upload assets to Misty at the start of a skill.
+* AssetWrapper is an example library to show one way to upload assets to Misty's Windows IoT filesystem at the start of a skill.
 
 * helloMisty/Assets/SkillAssets
 	The items in this folder will be uploaded the first time the skill runs if the files do not exist.
@@ -120,8 +121,8 @@ Say Hey Misty and then ask Misty...
  * the Day
  * the Weather
  * a Joke
- * to move her arms or her head
- * to change her chest color l.e.d.
+ * to move her arms or her head, using ASR and basic text comparison
+ * to change her chest color l.e.d., using ASR and basic text comparison
  * to dance
 
  Misty's Bumpers will do the following:
@@ -131,6 +132,7 @@ Say Hey Misty and then ask Misty...
  * back left - the Day
  
  Cap touch will make sounds and change Misty's face.
+
 -----------------------------------------------
 -----------------------------------------------
 
@@ -155,14 +157,14 @@ WINDOWS IOT FILES
 -----------------------------------------------
 DEBUGGING CODE
 
-After deploying new code to debug, use Force Reload on the Skill Management page, or re-stop, wait for its cleanup to happen, and the start the skill to ensure a new version is loaded on the robot.
+After pushing new code to debug from visual studio, use Force Reload on the Skill Management page, or re-stop, wait for its cleanup to happen, and then start the skill to ensure a new version is loaded on the robot. You should be connected to the debugger.
 
 -----------------------------------------------
 WIRED MISTY
 
 To directly access Misty, you can use an ethernet cable and two (2) USB-to-ethernet adapters to connect directly from a computer to Misty. If you are a developer, this can also be a much faster way to push skills to Misty.
 
-Connect the cable to your computer using one of the adapters and the other to Misty's USB port on her back, and go to the device manager's Connectivity -> Network Tab and look for the USB to Ethernet IP.
+Connect the cable to your computer using one of the adapters, and the other adapter to Misty's USB port on her back, and go to the device manager's Connectivity -> Network Tab and look for the USB to Ethernet IP.
 
 -----------------------------------------------
 UPDATING WEB TOOLS
@@ -173,5 +175,5 @@ You should make a copy of the working web tools if you are planning on making up
 -----------------------------------------------
 DEVICE MANAGER
 
-Going to \\<MistyIp>:8080 will give you the device manager (you'll need to log in - your passwoprd should be on the bottom of your Misty) where you can manage the device a little more directly. Be careful if you are here as you can uninstall Misty!
+Going to \\<MistyIp>:8080 will give you the device manager (you'll need to log in - your passwopd should be on the bottom of your Misty) where you can manage the device a little more directly. Be careful if you are here as you can uninstall Misty!
 	* To use some of the features in the device manager (like performance tracing and app management) you need to reload the page and log in again at the ethernet cable's IP (not wifi). You can find that on the device manager's Connectivity -> Network Tab, look for the USB to Ethernet IP.
