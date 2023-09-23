@@ -526,14 +526,14 @@ finally
 
 private static async Task Cleanup()
 {
-if (_misty != null)
-{
-    _misty.UnregisterAllEvents(null);
-    await _misty.StopConversationAsync();
-    await _misty.StopKeyPhraseRecognitionAsync();
-    await _misty.StopRobotInteractionEventAsync();
-    await _misty.SetDisplaySettingsAsync(true);
-}
+    if (_misty != null)
+    {
+        _misty.UnregisterAllEvents(null);
+        await _misty.StopConversationAsync();
+        await _misty.StopKeyPhraseRecognitionAsync();
+        await _misty.StopRobotInteractionEventAsync();
+        await _misty.SetDisplaySettingsAsync(true);
+    }
 }
 
 #region IDisposable Support

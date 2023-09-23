@@ -25,12 +25,6 @@ namespace Wander
 
 		public DriveMode DriveMode { get; private set; } = DriveMode.Stopped;
 
-		public INativeRobotSkill Skill { get; private set; } = new NativeRobotSkill("WanderSkill", "d8d01527-f1c2-4f2a-8843-36cb710ecfa7")
-		{
-			AllowedCleanupTimeInMs = 2000,
-			TimeoutInSeconds = int.MaxValue
-		};
-
 		public DriveManager(IRobotMessenger misty)
 		{
 			_misty = misty;
@@ -131,7 +125,6 @@ namespace Wander
 			}
 		}
 		
-		
 		private void RegisterEvents()
 		{
 			//Register Bump Sensors with a callback
@@ -179,7 +172,6 @@ namespace Wander
 			
 			
 		}
-
 
 		private bool TryGetAdjustedDistance(ITimeOfFlightEvent tofEvent, out double distance)
 		{
@@ -291,7 +283,7 @@ namespace Wander
 			{
 				case TimeOfFlightPosition.DownwardFrontRight:
 					_currentObstacleState.FrontRightEdgeTOF = edgeEvent.DistanceInMeters;
-					break;
+ 					break;
 				case TimeOfFlightPosition.DownwardFrontLeft:
 					_currentObstacleState.FrontLeftEdgeTOF = edgeEvent.DistanceInMeters;
 					break;

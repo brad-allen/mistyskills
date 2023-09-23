@@ -41,7 +41,12 @@ namespace MysticalMisty
 		public async void OnStart(object sender, IDictionary<string, object> parameters)
 		{
             try
-            {
+			{
+				//TODO test this with other events
+				_misty.UnregisterAllEvents(null);
+				//give enough time for the events to unregister
+				await Task.Delay(1000);
+
 				//example log intercept - uncomment to get events on every skill message
 				// Can be very busy and should only be used for debugging, can slow down skill!!
 				//_misty.RegisterForSDKLogEvents(HandleLogEvent); 
